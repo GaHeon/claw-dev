@@ -41,3 +41,19 @@ test("resolveCompatPortAssignment falls back to the first available port", async
 
   assert.equal(port, "8790");
 });
+
+test("resolveCompatPortAssignment throws when no port is available", async () => {
+  await assert.rejects(
+    () =>
+      resolveCompatPortAssignment({
+        preferredPort: "8787",
+        explicitPort: false,
+        provider: "openai",
+        model: "gpt-5.4",
+        isHealthyProxy: async () => false,
+        canListenOnPort: async () => false,
+        maxAttempts: 3,
+      }),
+    /Could not find a free compatibility proxy port/,
+  );
+});

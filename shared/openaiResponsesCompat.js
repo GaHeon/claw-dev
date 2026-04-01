@@ -15,7 +15,7 @@ export function openAICompatibleMessagesToResponsesInput(messages) {
       input.push({
         type: "function_call_output",
         call_id: typeof message.tool_call_id === "string" ? message.tool_call_id : `call_${randomUUID()}`,
-        output: [{ type: "input_text", text: content }],
+        output: content,
       });
       continue;
     }
@@ -169,9 +169,20 @@ export function parseResponsesSseToResult(sseText) {
   const toolCallIds = [];
   const textByMessageId = new Map();
   let responseId = null;
+  let failureMessage = null;
 
   for (const event of parseSseJsonEvents(sseText)) {
     const type = typeof event.type === "string" ? event.type : "";
+
+    if (
+      type === "response.failed" &&
+      isRecord(event.response) &&
+      isRecord(event.response.error) &&
+      typeof event.response.error.message === "string"
+    ) {
+      failureMessage = event.response.error.message;
+      continue;
+    }
 
     if (type === "response.output_text.delta") {
       const itemId = typeof event.item_id === "string" ? event.item_id : `msg_${randomUUID()}`;
@@ -238,6 +249,10 @@ export function parseResponsesSseToResult(sseText) {
 
   }
 
+  if (failureMessage) {
+    throw new Error(failureMessage);
+  }
+
   return {
     responseId,
     toolCallIds,
@@ -247,10 +262,10 @@ export function parseResponsesSseToResult(sseText) {
 
 function parseSseJsonEvents(sseText) {
   return (sseText ?? "")
-    .split(/\n\n+/)
+    .split(/(?:\r\n|\r|\n){2,}/)
     .map((chunk) => {
       const dataLines = chunk
-        .split("\n")
+        .split(/\r\n|\r|\n/)
         .filter((line) => line.startsWith("data:"))
         .map((line) => line.slice(5).trim())
         .filter(Boolean);

@@ -457,8 +457,14 @@ async function primeAvailableModels(provider, env) {
     availableModels: nextModels,
   };
 
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(settingsPath, `${JSON.stringify(nextSettings, null, 2)}\n`, "utf8");
+  try {
+    fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+    fs.writeFileSync(settingsPath, `${JSON.stringify(nextSettings, null, 2)}\n`, "utf8");
+  } catch (error) {
+    console.warn(`Could not write availableModels in ${settingsPath}; skipping priming.`);
+    restoreAvailableModels = null;
+    return;
+  }
 
   restoreAvailableModels = () => {
     try {

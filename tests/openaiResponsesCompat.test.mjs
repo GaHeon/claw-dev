@@ -25,7 +25,7 @@ test("openAICompatibleMessagesToResponsesInput converts assistant tool history",
     { type: "message", role: "user", content: [{ type: "input_text", text: "hello" }] },
     { type: "message", role: "assistant", content: [{ type: "output_text", text: "calling tool" }] },
     { type: "function_call", call_id: "call-1", name: "weather", arguments: "{\"city\":\"Seoul\"}" },
-    { type: "function_call_output", call_id: "call-1", output: [{ type: "input_text", text: "sunny" }] },
+    { type: "function_call_output", call_id: "call-1", output: "sunny" },
   ]);
 });
 
@@ -133,16 +133,43 @@ test("sliceResponsesInputToLatestToolTurn keeps the latest tool loop intact", ()
   const input = [
     { type: "message", role: "user", content: [{ type: "input_text", text: "Old question" }] },
     { type: "function_call", call_id: "call-old", name: "search", arguments: "{\"q\":\"old\"}" },
-    { type: "function_call_output", call_id: "call-old", output: [{ type: "input_text", text: "old result" }] },
+    { type: "function_call_output", call_id: "call-old", output: "old result" },
     { type: "message", role: "user", content: [{ type: "input_text", text: "New question" }] },
     { type: "message", role: "assistant", content: [{ type: "output_text", text: "Calling weather" }] },
     { type: "function_call", call_id: "call-new", name: "weather", arguments: "{\"city\":\"Seoul\"}" },
-    { type: "function_call_output", call_id: "call-new", output: [{ type: "input_text", text: "Sunny, 19C" }] },
+    { type: "function_call_output", call_id: "call-new", output: "Sunny, 19C" },
   ];
 
   assert.deepEqual(sliceResponsesInputToLatestToolTurn(input), [
     { type: "message", role: "assistant", content: [{ type: "output_text", text: "Calling weather" }] },
     { type: "function_call", call_id: "call-new", name: "weather", arguments: "{\"city\":\"Seoul\"}" },
-    { type: "function_call_output", call_id: "call-new", output: [{ type: "input_text", text: "Sunny, 19C" }] },
+    { type: "function_call_output", call_id: "call-new", output: "Sunny, 19C" },
   ]);
+});
+
+test("parseResponsesSseToResult throws on response.failed", () => {
+  const sse = [
+    "event: response.failed",
+    'data: {"type":"response.failed","response":{"error":{"message":"upstream failed"}}}',
+    "",
+  ].join("\r\n");
+
+  assert.throws(() => parseResponsesSseToResult(sse), /upstream failed/);
+});
+
+test("parseResponsesSseToResult handles CRLF-delimited SSE chunks", () => {
+  const sse = [
+    "event: response.output_item.done",
+    'data: {"type":"response.output_item.done","item":{"type":"message","role":"assistant","id":"msg-1","content":[{"type":"output_text","text":"Hello from CRLF"}]}}',
+    "",
+    "event: response.completed",
+    'data: {"type":"response.completed","response":{"id":"resp-crlf"}}',
+    "",
+  ].join("\r\n");
+
+  assert.deepEqual(parseResponsesSseToResult(sse), {
+    responseId: "resp-crlf",
+    toolCallIds: [],
+    content: [{ type: "text", text: "Hello from CRLF", citations: null }],
+  });
 });
