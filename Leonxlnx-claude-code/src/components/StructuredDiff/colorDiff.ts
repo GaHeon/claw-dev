@@ -1,37 +1,36 @@
-import {
-  ColorDiff,
-  ColorFile,
-  getSyntaxTheme as nativeGetSyntaxTheme,
-  type SyntaxTheme,
-} from 'color-diff-napi'
 import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
 
-export type ColorModuleUnavailableReason = 'env'
+export type ColorModuleUnavailableReason = 'env' | 'stub'
+
+// Stub types matching the original color-diff-napi interface
+type SyntaxTheme = Record<string, unknown>
 
 /**
- * Returns a static reason why the color-diff module is unavailable, or null if available.
- * 'env' = disabled via CLAUDE_CODE_SYNTAX_HIGHLIGHT
- *
- * The TS port of color-diff works in all build modes, so the only way to
- * disable it is via the env var.
+ * NOTE: The `color-diff-napi` package is an Anthropic-internal native addon.
+ * A package with the same name exists on npm and could be a supply chain risk.
+ * All exports are stubbed as null/no-ops in the open-source build.
  */
-export function getColorModuleUnavailableReason(): ColorModuleUnavailableReason | null {
+
+/**
+ * Returns a static reason why the color-diff module is unavailable.
+ * In the open-source build, this always returns a reason (never null).
+ */
+export function getColorModuleUnavailableReason(): ColorModuleUnavailableReason {
   if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT)) {
     return 'env'
   }
+  // Native module not available in open-source build
+  return 'stub'
+}
+
+export function expectColorDiff(): null {
   return null
 }
 
-export function expectColorDiff(): typeof ColorDiff | null {
-  return getColorModuleUnavailableReason() === null ? ColorDiff : null
+export function expectColorFile(): null {
+  return null
 }
 
-export function expectColorFile(): typeof ColorFile | null {
-  return getColorModuleUnavailableReason() === null ? ColorFile : null
-}
-
-export function getSyntaxTheme(themeName: string): SyntaxTheme | null {
-  return getColorModuleUnavailableReason() === null
-    ? nativeGetSyntaxTheme(themeName)
-    : null
+export function getSyntaxTheme(_themeName: string): SyntaxTheme | null {
+  return null
 }
