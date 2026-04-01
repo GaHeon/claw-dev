@@ -188,7 +188,7 @@ After you choose a provider, Claw Dev also lets you enter any model id you want 
 - `openai/o4-mini`
 - `qwen2.5-coder:14b`
 
-Claw Dev also seeds the bundled in-app `/model` picker with provider-specific suggestions for the current session, while still allowing any custom model id through `--model`.
+Claw Dev also narrows the bundled in-app `/model` picker to provider-relevant models for the current session, while still allowing any custom model id through `--model`.
 
 ## Additional Cloud Provider Setup
 

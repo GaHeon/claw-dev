@@ -27,6 +27,7 @@ let exiting = false;
 let proxyProcess = null;
 let ownsProxyProcess = false;
 let restoreModelPickerCache = null;
+let restoreAvailableModels = null;
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
@@ -65,6 +66,7 @@ async function main() {
     env.ANTHROPIC_AUTH_TOKEN = "claw-dev-proxy";
     delete env.ANTHROPIC_API_KEY;
     await primeBundledModelPicker(provider, env);
+    await primeAvailableModels(provider, env);
     return launchBundledClient(env, forwardArgs);
   } finally {
     rl.close();
@@ -418,10 +420,66 @@ async function primeBundledModelPicker(provider, env) {
   };
 }
 
+async function primeAvailableModels(provider, env) {
+  const settingsPath =
+    process.env.CLAW_USER_SETTINGS_PATH?.trim() || path.join(os.homedir(), ".claude", "settings.json");
+
+  let currentSettings = {};
+  try {
+    if (fs.existsSync(settingsPath)) {
+      currentSettings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    }
+  } catch (error) {
+    console.warn(`Could not read ${settingsPath}; skipping availableModels priming.`);
+    return;
+  }
+
+  const nextModels = await getProviderAllowlist(provider, env);
+  const previousModels = Array.isArray(currentSettings.availableModels)
+    ? currentSettings.availableModels
+    : undefined;
+
+  if (JSON.stringify(previousModels ?? []) === JSON.stringify(nextModels)) {
+    restoreAvailableModels = null;
+    return;
+  }
+
+  const nextSettings = {
+    ...currentSettings,
+    availableModels: nextModels,
+  };
+
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, `${JSON.stringify(nextSettings, null, 2)}\n`, "utf8");
+
+  restoreAvailableModels = () => {
+    try {
+      const latest = fs.existsSync(settingsPath)
+        ? JSON.parse(fs.readFileSync(settingsPath, "utf8"))
+        : {};
+      const restored = { ...latest };
+      if (previousModels === undefined) {
+        delete restored.availableModels;
+      } else {
+        restored.availableModels = previousModels;
+      }
+      fs.writeFileSync(settingsPath, `${JSON.stringify(restored, null, 2)}\n`, "utf8");
+    } catch (error) {
+      console.warn(`Could not restore availableModels in ${settingsPath}.`);
+    }
+  };
+}
+
 async function getProviderModelOptions(provider, env) {
   const helperUrl = pathToFileURL(path.join(workspaceRoot, "shared", "providerModels.js")).href;
   const helper = await import(helperUrl);
   return helper.providerAdditionalModelOptions(provider, env);
+}
+
+async function getProviderAllowlist(provider, env) {
+  const helperUrl = pathToFileURL(path.join(workspaceRoot, "shared", "providerModels.js")).href;
+  const helper = await import(helperUrl);
+  return helper.providerModelCatalog(provider, env);
 }
 
 async function getProviderPromptSuggestions(provider, env) {
@@ -612,6 +670,10 @@ function cleanupAndExit(code) {
   if (restoreModelPickerCache) {
     restoreModelPickerCache();
     restoreModelPickerCache = null;
+  }
+  if (restoreAvailableModels) {
+    restoreAvailableModels();
+    restoreAvailableModels = null;
   }
   if (ownsProxyProcess && proxyProcess && !proxyProcess.killed) {
     proxyProcess.kill();
