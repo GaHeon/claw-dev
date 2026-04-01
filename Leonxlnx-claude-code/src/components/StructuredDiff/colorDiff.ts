@@ -2,8 +2,11 @@ import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
 
 export type ColorModuleUnavailableReason = 'env' | 'stub'
 
-// Stub types matching the original color-diff-napi interface
-type SyntaxTheme = Record<string, unknown>
+// Minimal stub shape matching the properties read by downstream consumers.
+type SyntaxTheme = {
+  theme: string
+  source?: string
+}
 
 /**
  * NOTE: The `color-diff-napi` package is an Anthropic-internal native addon.

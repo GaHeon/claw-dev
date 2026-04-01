@@ -58,7 +58,7 @@ export function ThemePicker(t0) {
   const colorModuleUnavailableReason = t6;
   let t7;
   if ($[1] !== theme) {
-    t7 = colorModuleUnavailableReason === null ? getSyntaxTheme(theme) : null;
+    t7 = colorModuleUnavailableReason ? null : getSyntaxTheme(theme);
     $[1] = theme;
     $[2] = t7;
   } else {
@@ -77,7 +77,7 @@ export function ThemePicker(t0) {
   let t8;
   if ($[3] !== setAppState || $[4] !== syntaxHighlightingDisabled) {
     t8 = () => {
-      if (colorModuleUnavailableReason === null) {
+      if (!colorModuleUnavailableReason) {
         const newValue = !syntaxHighlightingDisabled;
         updateSettingsForSource("userSettings", {
           syntaxHighlightingDisabled: newValue
@@ -249,7 +249,7 @@ export function ThemePicker(t0) {
   } else {
     t21 = $[36];
   }
-  const t22 = colorModuleUnavailableReason === "env" ? `Syntax highlighting disabled (via CLAUDE_CODE_SYNTAX_HIGHLIGHT=${process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT})` : syntaxHighlightingDisabled ? `Syntax highlighting disabled (${syntaxToggleShortcut} to enable)` : syntaxTheme ? `Syntax theme: ${syntaxTheme.theme}${syntaxTheme.source ? ` (from ${syntaxTheme.source})` : ""} (${syntaxToggleShortcut} to disable)` : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`;
+  const t22 = colorModuleUnavailableReason === "env" ? `Syntax highlighting disabled (via CLAUDE_CODE_SYNTAX_HIGHLIGHT=${process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT})` : colorModuleUnavailableReason === "stub" ? "Syntax highlighting unavailable in the open-source build" : syntaxHighlightingDisabled ? `Syntax highlighting disabled (${syntaxToggleShortcut} to enable)` : syntaxTheme ? `Syntax theme: ${syntaxTheme.theme}${syntaxTheme.source ? ` (from ${syntaxTheme.source})` : ""} (${syntaxToggleShortcut} to disable)` : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`;
   let t23;
   if ($[37] !== t22) {
     t23 = <Text dimColor={true}>{" "}{t22}</Text>;

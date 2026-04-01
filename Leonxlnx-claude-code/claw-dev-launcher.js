@@ -374,13 +374,14 @@ async function resolveModelSelection({ rl, env, provider, modelArg, envKey, defa
   // Warn if the input looks like a menu number instead of a model name.
   // Only applies to single/double digit numbers — real model IDs like
   // "qwen2.5-coder:7b" contain non-digit characters and won't match.
-  if (answer && /^\d{1,2}$/.test(answer) && suggestions.length > 0) {
+  if (answer && /^\d{1,2}$/.test(answer) && suggestedModels.length > 0) {
+    const fallbackModel = /^\d{1,2}$/.test(existing) ? defaultModel : existing;
     process.stdout.write(
       `\n⚠  "${answer}" looks like a menu number, not a model name.\n` +
-      `   Did you mean one of: ${suggestions.join(", ")}?\n` +
-      `   Using default model: ${existing}\n\n`
+      `   Did you mean one of: ${suggestedModels.join(", ")}?\n` +
+      `   Using default model: ${fallbackModel}\n\n`
     );
-    env[envKey] = existing;
+    env[envKey] = fallbackModel;
     return env[envKey];
   }
 
